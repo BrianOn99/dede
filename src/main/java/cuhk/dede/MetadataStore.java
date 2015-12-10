@@ -57,8 +57,15 @@ public class MetadataStore
         checksum_store.put(name, checksums);
     }
 
-    public void commitClose() {
+    public byte[] getFileRecord(String name) {
+        return checksum_store.get(name);
+    }
+
+    public void commit() {
         db.commit();
+    }
+
+    public void close() {
         db.close();
     }
 }

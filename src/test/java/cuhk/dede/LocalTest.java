@@ -4,6 +4,7 @@ import cuhk.dede.localBackend.CheckInit;
 import cuhk.dede.localBackend.LocalHandler;
 import java.lang.Runtime;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.lang.Process;
 import java.io.IOException;
 
@@ -11,6 +12,7 @@ import org.junit.*;
 import org.junit.rules.ExpectedException;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertArrayEquals;
 
 import org.junit.runners.MethodSorters;
 
@@ -24,7 +26,9 @@ public class LocalTest
     @BeforeClass
     public static void setup() {
         try {
-            Runtime.getRuntime().exec(new String[]{"rm", "-r", CheckInit.dir}).waitFor();
+            Runtime.getRuntime().exec(
+                    new String[]{"rm", "-r", CheckInit.dir, MetadataStore.db_name}
+                    ).waitFor();
         } catch (Exception e) {
             System.err.println("Error removing old data dir");
             System.exit(1);
@@ -44,11 +48,11 @@ public class LocalTest
      * test upload, check if the size of all chuncks is smaller than original
      */
     @Test
-    public void testUpload() throws IOException {
+    public void testUploadDownload() throws IOException {
         CheckInit.run();
 
         ByteArrayInputStream mockFile = new ByteArrayInputStream(data);
-        FileUploadChunker.upload(mockFile, "on99file", paramsL, new LocalHandler());
+        FileChunker.upload(mockFile, "on99file", paramsL, new LocalHandler());
 
         byte[] du_output = new byte[64];
         int count = 0;
@@ -62,6 +66,11 @@ public class LocalTest
         int all_chunk_size = Integer.parseInt(s.split("\t")[0]);
         assertTrue("Total data chunk size should become smaller",
                    all_chunk_size < data.length);
+
+        ByteArrayOutputStream mockoutput = new ByteArrayOutputStream();
+        FileChunker.download(mockoutput, "on99file", new LocalHandler());
+        //System.out.println(mockoutput.toString());
+        assertArrayEquals(data, mockoutput.toByteArray());
     }
 
     @Test
@@ -69,10 +78,10 @@ public class LocalTest
         CheckInit.run();
 
         ByteArrayInputStream mockFile2 = new ByteArrayInputStream(data);
-        FileUploadChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
+        FileChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
         mockFile2 = new ByteArrayInputStream(data);
         thrown.expect(IOException.class);
         thrown.expectMessage("File already exist in the store");
-        FileUploadChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
+        FileChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
     }
 }

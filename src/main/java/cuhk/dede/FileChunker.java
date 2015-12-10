@@ -2,6 +2,7 @@ package cuhk.dede;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
@@ -12,9 +13,10 @@ import static javax.xml.bind.DatatypeConverter.printHexBinary;
  * split a InputStream as chunks
  * Give them to the given handler to upload
  */
-public class FileUploadChunker
+public class FileChunker
 {
     private static final String hash_func = "SHA-1";
+    private static final int checksum_hexlen = 40;
 
     public static void upload(InputStream raw_input, String uploaded_name,
             RabinChunker.Params params, Handler upload_handler) throws IOException {
@@ -59,6 +61,30 @@ public class FileUploadChunker
         }
 
         meta_store.newFileRecord(uploaded_name, all_checksums.toByteArray());
-        meta_store.commitClose();
+        meta_store.commit();
+        meta_store.close();
+    }
+
+    public static void download(OutputStream dest, String uploaded_name,
+            Handler download_handler) throws IOException {
+        MetadataStore meta_store = new MetadataStore(MetadataStore.Mode.LOCAL);
+        if (!meta_store.fileExist(uploaded_name)) {
+            throw new IOException("File not exist in store");
+        }
+
+        byte[] checksum_all = meta_store.getFileRecord(uploaded_name);
+        byte[] buf = new byte[2048];
+
+        for (int i=0; i < checksum_all.length; i += checksum_hexlen) {
+            String nth_checksum = new String(checksum_all, i, checksum_hexlen, "US-ASCII");
+            InputStream chunk_stream = download_handler.download(nth_checksum);
+
+            int count;
+            while ((count = chunk_stream.read(buf)) >= 0) {
+                dest.write(buf, 0, count);
+            }
+        }
+
+        meta_store.close();
     }
 }
