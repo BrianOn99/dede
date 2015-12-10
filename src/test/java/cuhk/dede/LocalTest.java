@@ -49,6 +49,7 @@ public class LocalTest
      */
     @Test
     public void testUploadDownload() throws IOException {
+        setup();
         CheckInit.run();
 
         ByteArrayInputStream mockFile = new ByteArrayInputStream(data);
@@ -83,5 +84,19 @@ public class LocalTest
         thrown.expect(IOException.class);
         thrown.expectMessage("File already exist in the store");
         FileChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
+    }
+
+    /*
+     * This test case is inspected by eye
+     */
+    @Test
+    public void testDeleteFile() throws IOException {
+        CheckInit.run();
+
+        ByteArrayInputStream mockFile3 = new ByteArrayInputStream(data);
+        FileChunker.upload(mockFile3, "on99file3", paramsL, new LocalHandler());
+        mockFile3 = new ByteArrayInputStream("this will not delete".getBytes());
+        FileChunker.upload(mockFile3, "ShouldNotDelete", paramsL, new LocalHandler());
+        FileChunker.delete("on99file3", new LocalHandler());
     }
 }

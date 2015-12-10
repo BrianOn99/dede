@@ -35,4 +35,9 @@ public class LocalHandler implements Handler
         }
         return stream;
     }
+
+    public void delete(String name) {
+        File fpath = new File(CheckInit.dir, name);
+        fpath.delete();
+    }
 }

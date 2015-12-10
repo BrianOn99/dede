@@ -87,4 +87,29 @@ public class FileChunker
 
         meta_store.close();
     }
+
+    /* This method has many duplication with download.  I don't know how to refactor it
+     * I miss ruby block */
+    public static void delete(String uploaded_name, Handler delete_handler)
+            throws IOException {
+        MetadataStore meta_store = new MetadataStore(MetadataStore.Mode.LOCAL);
+        if (!meta_store.fileExist(uploaded_name)) {
+            throw new IOException("File not exist in store");
+        }
+
+        byte[] checksum_all = meta_store.getFileRecord(uploaded_name);
+        byte[] buf = new byte[2048];
+
+        for (int i=0; i < checksum_all.length; i += checksum_hexlen) {
+            String nth_checksum = new String(checksum_all, i, checksum_hexlen, "US-ASCII");
+            if (meta_store.refCountDecr(nth_checksum) == 0) {
+                meta_store.deleteChecksum(nth_checksum);
+                delete_handler.delete(nth_checksum);
+            }
+        }
+        meta_store.deleteFileRecord(uploaded_name);
+
+        meta_store.commit();
+        meta_store.close();
+    }
 }

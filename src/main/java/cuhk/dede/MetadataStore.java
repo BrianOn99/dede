@@ -48,13 +48,28 @@ public class MetadataStore
         refcount_store.put(checksum, 1);
     }
 
+    public void deleteChecksum(String checksum) {
+        refcount_store.remove(checksum);
+    }
+
     public void refCountIncr(String checksum) {
         int now_count = refcount_store.get(checksum);
         refcount_store.put(checksum, now_count + 1);
     }
 
+    public int refCountDecr(String checksum) {
+        int now_count = refcount_store.get(checksum);
+        now_count--;
+        refcount_store.put(checksum, now_count);
+        return now_count;
+    }
+
     public void newFileRecord(String name, byte[] checksums) {
         checksum_store.put(name, checksums);
+    }
+
+    public void deleteFileRecord(String name) {
+        checksum_store.remove(name);
     }
 
     public byte[] getFileRecord(String name) {
