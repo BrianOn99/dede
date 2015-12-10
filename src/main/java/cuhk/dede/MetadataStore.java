@@ -37,11 +37,16 @@ public class MetadataStore
      * Report if a chunk represented by its checksum is new (does not exist)
      */
     public boolean isnew(String checksum) {
-        return refcount_store.containsKey(checksum);
+        return !(refcount_store.containsKey(checksum));
     }
 
     public void newChecksum(String checksum) {
         refcount_store.put(checksum, 1);
+    }
+
+    public void refCountIncr(String checksum) {
+        int now_count = refcount_store.get(checksum);
+        refcount_store.put(checksum, now_count + 1);
     }
 
     public void newFileRecord(String name, byte[] checksums) {

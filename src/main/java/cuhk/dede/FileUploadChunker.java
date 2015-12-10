@@ -16,7 +16,8 @@ public class FileUploadChunker
 {
     private final String hash_func = "SHA-1";
 
-    public FileUploadChunker(InputStream raw_input, RabinChunker.Params params, Handler upload_handler) throws IOException {
+    public FileUploadChunker(InputStream raw_input, String uploaded_name,
+            RabinChunker.Params params, Handler upload_handler) throws IOException {
         BufferedInputStream in_stream = new BufferedInputStream(raw_input);
         RabinChunker chunker = new RabinChunker(in_stream, params);
         /*
@@ -40,17 +41,19 @@ public class FileUploadChunker
             byte[] chunk_checksum = sha1sum.digest();
             String hex_checksum = printHexBinary(chunk_checksum);
             if (meta_store.isnew(hex_checksum)){
-                /* make new record */
+                //System.out.printf("New chunk %s\n", new String(chunki.chunk));
+                /* make new metadata record */
+                meta_store.newChecksum(hex_checksum);
+                /* upload the chunk using its checksum as name */
+                upload_handler.upload(hex_checksum, chunki.chunk, chunki.size);
             } else {
-                /* increase refcount */
+                //System.out.printf("Depuplicated chunk %s\n", new String(chunki.chunk));
+                meta_store.refCountIncr(hex_checksum);
             }
-
-            /* upload the chunk using its checksum as name */
-            upload_handler.upload(hex_checksum, chunki.chunk, chunki.size);
 
             all_checksums.write(hex_checksum.getBytes(Charset.forName("US-ASCII")));
         }
-        String s = all_checksums.toString();
-        System.out.printf("all sums are %s\n", s);
+
+        meta_store.newFileRecord(uploaded_name, all_checksums.toByteArray());
     }
 }
