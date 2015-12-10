@@ -33,10 +33,10 @@ public class LocalTest
     public void testUpload() {
         CheckInit.run();
 
-        String datastr = "1234567890qwertyuiopasdfghjklzxcvbnm";
+        String datastr = "1234567890";
         byte[] data = (datastr+datastr+datastr).getBytes();
         ByteArrayInputStream mockFile = new ByteArrayInputStream(data);
-        RabinChunker.Params paramsL = new RabinChunker.Params(8, 512, 8, 4, 7);
+        RabinChunker.Params paramsL = new RabinChunker.Params(3, 512, 3, 4, 7);
 
         try {
             new FileUploadChunker(mockFile, paramsL, new LocalHandler());

@@ -22,6 +22,13 @@ public class RabinChunker
         public int prime;
 
         public Params(int winSize, int maxSize, int minSize, int avgSize, int prime) {
+            /*
+             * window size must be at least minimum chunk size, otherwise the rabin
+             * fingerprint does not only depends on the chunk.
+             * In real world, it will not happen.  But this is an assignment.
+             */
+            if (winSize < minSize)
+                winSize = minSize;
             this.winSize = winSize;
             this.maxSize = maxSize;
             this.minSize = minSize;
@@ -88,15 +95,21 @@ public class RabinChunker
         for (int ch; (ch = filein.read()) != -1;) {
             chunk[currSize++] = (byte)ch;
             fpt = fpt * params.prime + ch;
+            /*
+             * If we are near the start of processing, or just have given out a chunk
+             * skip subtracting the byte m index before
+             */
             if (currSize > params.winSize)
                 fpt -= chunk[currSize - (params.winSize+1)] * modExpPrime;
             fpt &= modmask;
+            //System.out.printf("processed %s, now fingerprint %d, masked %d\n", ch, fpt, (fpt & avgSize_1));
 
             if ((currSize > params.minSize) &&
                 ((currSize > params.maxSize) || goodfpt())
                 ) {
                 ChunkInfo retInfo = new ChunkInfo(currSize, chunk);
                 chunk = new byte[params.maxSize];
+                fpt = 0;
                 currSize = 0;
                 return retInfo;
             }
