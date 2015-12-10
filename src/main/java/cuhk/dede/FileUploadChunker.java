@@ -14,16 +14,20 @@ import static javax.xml.bind.DatatypeConverter.printHexBinary;
  */
 public class FileUploadChunker
 {
-    private final String hash_func = "SHA-1";
+    private static final String hash_func = "SHA-1";
 
-    public FileUploadChunker(InputStream raw_input, String uploaded_name,
+    public static void upload(InputStream raw_input, String uploaded_name,
             RabinChunker.Params params, Handler upload_handler) throws IOException {
+        MetadataStore meta_store = new MetadataStore(MetadataStore.Mode.LOCAL);
+        if (meta_store.fileExist(uploaded_name)) {
+            throw new IOException("File already exist in the store");
+        }
+
         BufferedInputStream in_stream = new BufferedInputStream(raw_input);
         RabinChunker chunker = new RabinChunker(in_stream, params);
         /*
          * TODO: make it general to handle remote store
          */
-        MetadataStore meta_store = new MetadataStore(MetadataStore.Mode.LOCAL);
 
         MessageDigest sha1sum = null;
         try {
@@ -55,5 +59,6 @@ public class FileUploadChunker
         }
 
         meta_store.newFileRecord(uploaded_name, all_checksums.toByteArray());
+        meta_store.commitClose();
     }
 }

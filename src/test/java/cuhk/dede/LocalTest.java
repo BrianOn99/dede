@@ -5,13 +5,22 @@ import cuhk.dede.localBackend.LocalHandler;
 import java.lang.Runtime;
 import java.io.ByteArrayInputStream;
 import java.lang.Process;
+import java.io.IOException;
 
 import org.junit.*;
+import org.junit.rules.ExpectedException;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.junit.runners.MethodSorters;
+
+/* must not access database in parallel */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class LocalTest
 {
+    private static RabinChunker.Params paramsL = new RabinChunker.Params(3, 512, 3, 4, 7);
+    private byte[] data = "123456789012345678901234567890".getBytes();
+
     @BeforeClass
     public static void setup() {
         try {
@@ -28,23 +37,18 @@ public class LocalTest
         assertFalse("Should not initialize 2 times", CheckInit.run());
     }
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     /*
      * test upload, check if the size of all chuncks is smaller than original
      */
     @Test
-    public void testUpload() {
+    public void testUpload() throws IOException {
         CheckInit.run();
 
-        String datastr = "1234567890";
-        byte[] data = (datastr+datastr+datastr).getBytes();
         ByteArrayInputStream mockFile = new ByteArrayInputStream(data);
-        RabinChunker.Params paramsL = new RabinChunker.Params(3, 512, 3, 4, 7);
-
-        try {
-            new FileUploadChunker(mockFile, "on99file", paramsL, new LocalHandler());
-        } catch (java.io.IOException e) {
-            System.err.println("Error uploading chunk");
-        }
+        FileUploadChunker.upload(mockFile, "on99file", paramsL, new LocalHandler());
 
         byte[] du_output = new byte[64];
         int count = 0;
@@ -58,5 +62,17 @@ public class LocalTest
         int all_chunk_size = Integer.parseInt(s.split("\t")[0]);
         assertTrue("Total data chunk size should become smaller",
                    all_chunk_size < data.length);
+    }
+
+    @Test
+    public void testUploadSameFile() throws IOException {
+        CheckInit.run();
+
+        ByteArrayInputStream mockFile2 = new ByteArrayInputStream(data);
+        FileUploadChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
+        mockFile2 = new ByteArrayInputStream(data);
+        thrown.expect(IOException.class);
+        thrown.expectMessage("File already exist in the store");
+        FileUploadChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
     }
 }

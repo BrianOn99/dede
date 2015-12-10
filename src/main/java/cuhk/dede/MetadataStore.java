@@ -40,6 +40,10 @@ public class MetadataStore
         return !(refcount_store.containsKey(checksum));
     }
 
+    public boolean fileExist(String name) {
+        return checksum_store.containsKey(name);
+    }
+
     public void newChecksum(String checksum) {
         refcount_store.put(checksum, 1);
     }
@@ -51,5 +55,10 @@ public class MetadataStore
 
     public void newFileRecord(String name, byte[] checksums) {
         checksum_store.put(name, checksums);
+    }
+
+    public void commitClose() {
+        db.commit();
+        db.close();
     }
 }
