@@ -2,12 +2,14 @@ package cuhk.dede;
 
 import cuhk.dede.localBackend.CheckInit;
 import cuhk.dede.localBackend.LocalHandler;
+import cuhk.dede.remoteBackend.RemoteHandler;
 
 import java.lang.ClassLoader;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 
 import java.io.IOException;
 
@@ -59,25 +61,21 @@ public class Dede
         /* The assignment specification is rubbish. the local and remote file
          * name are the same */
         String file_name = args[5];
-        String mode = args[6];
+        MetadataStore.Mode mode = getMode(args[6]);
 
+        if (mode == MetadataStore.Mode.LOCAL) {
+            CheckInit.run();
+        }
+        Handler handler = getHandler(args[6]);
+
+        /* end setting up, try to upload */
         try (BufferedInputStream in_stream =
                 new BufferedInputStream(new FileInputStream(file_name))) {
-            switch (mode) {
-                case "local":
-                    CheckInit.run();
-                    try {
-                        FileChunker.upload(in_stream, file_name, rabin_params, new LocalHandler());
-                    } catch (IOException e) {
-                        System.err.println(e.getMessage());
-                        System.exit(1);
-                    }
-                    break;
-                case "remote":
-                    System.out.println("not implemented yet");
-                    break;
-                default:
-                    usageExit("Error: storage not supported - " + mode, 1);
+            try {
+                new FileChunker(mode, handler).upload(in_stream, file_name, rabin_params);
+            } catch (FileChunker.StoreException e) {
+                System.err.println(e.getMessage());
+                System.exit(1);
             }
         } catch (java.io.FileNotFoundException e) {
             System.err.printf("Error: file %s not found\n", file_name);
@@ -87,21 +85,38 @@ public class Dede
         }
     }
 
-    /* For download/delete, try remote first.  If fail, try local.
+    /*
+     * For download/delete, try remote first.  If fail, try local.
      * If it fail agian, it really fail.
      */
     private static void download(String[] args) {
         checkArgLen(args, 2);
 
         String file_name = args[1];
+        boolean success = false;
         try (BufferedOutputStream out_stream
                 = new BufferedOutputStream(new FileOutputStream(file_name), 1<<13)) {
-            FileChunker.download(out_stream, file_name, new LocalHandler());
+            try {
+                new FileChunker(MetadataStore.Mode.REMOTE, new RemoteHandler()).download(out_stream, file_name);
+                return;
+            } catch (FileChunker.StoreException e) {
+                System.err.printf("Failed trying remote storage: %s\n", e.getMessage());
+            }
+            try {
+                new FileChunker(MetadataStore.Mode.LOCAL, new LocalHandler()).download(out_stream, file_name);
+                return;
+            } catch (FileChunker.StoreException e) {
+                System.err.printf("Failed trying local storage: %s\n", e.getMessage());
+            }
         } catch (java.io.FileNotFoundException e) {
             System.out.printf("Error: cannnot write file %s\n  " + e.getMessage() + "\n", file_name);
         } catch (IOException e) {
-            System.err.printf("Error: %s\n", e.getMessage());
+            System.err.printf("Error closing file: %s\n", e.getMessage());
         }
+
+        /* reaching here means all fail */
+        System.err.println("Error: all attempts failed");
+        new File(file_name).delete();
     }
 
     private static void delete(String[] args) {
@@ -109,20 +124,35 @@ public class Dede
 
         String file_name = args[1];
         try {
-            FileChunker.delete(file_name, new LocalHandler());
-        } catch (IOException e) {
-            System.err.printf("Error: %s\n", e.getMessage());
+            new FileChunker(MetadataStore.Mode.REMOTE, new RemoteHandler()).delete(file_name);
+            return;
+        } catch (FileChunker.StoreException e) {
+            System.err.printf("Failed trying remote storage: %s\n", e.getMessage());
+        }
+        try {
+            new FileChunker(MetadataStore.Mode.LOCAL, new LocalHandler()).delete(file_name);
+            return;
+        } catch (FileChunker.StoreException e) {
+            System.err.printf("Failed trying local storage: %s\n", e.getMessage());
         }
     }
 
     private static void list(String[] args) {
-        MetadataStore.Mode mode = args[1].equals("remote") ? MetadataStore.Mode.REMOTE :
-                                                             MetadataStore.Mode.LOCAL;
-        MetadataStore meta_store = new MetadataStore(mode);
+        MetadataStore meta_store = new MetadataStore(getMode(args[1]));
         for (String file: meta_store.listFile()) {
             System.out.println(file);
         }
         meta_store.close();
+    }
+
+    private static MetadataStore.Mode getMode(String str) {
+        return str.equals("remote") ? MetadataStore.Mode.REMOTE :
+                                      MetadataStore.Mode.LOCAL;
+    }
+
+    private static Handler getHandler(String str) {
+        return str.equals("remote") ? null :
+                                      new LocalHandler();
     }
 
     private static void checkArgLen(String[] args, int len) {

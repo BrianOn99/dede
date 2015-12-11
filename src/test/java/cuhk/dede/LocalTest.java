@@ -20,6 +20,7 @@ import org.junit.runners.MethodSorters;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class LocalTest
 {
+    private static MetadataStore.Mode localmode = MetadataStore.Mode.LOCAL;
     private static RabinChunker.Params paramsL = new RabinChunker.Params(3, 512, 3, 4, 7);
     private byte[] data = "123456789012345678901234567890".getBytes();
 
@@ -41,19 +42,16 @@ public class LocalTest
         assertFalse("Should not initialize 2 times", CheckInit.run());
     }
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     /*
      * test upload, check if the size of all chuncks is smaller than original
      */
     @Test
-    public void testUploadDownload() throws IOException {
+    public void testUploadDownload() throws IOException, FileChunker.StoreException {
         setup();
         CheckInit.run();
 
         ByteArrayInputStream mockFile = new ByteArrayInputStream(data);
-        FileChunker.upload(mockFile, "on99file", paramsL, new LocalHandler());
+        new FileChunker(localmode, new LocalHandler()).upload(mockFile, "on99file", paramsL);
 
         byte[] du_output = new byte[64];
         int count = 0;
@@ -69,34 +67,37 @@ public class LocalTest
                    all_chunk_size < data.length);
 
         ByteArrayOutputStream mockoutput = new ByteArrayOutputStream();
-        FileChunker.download(mockoutput, "on99file", new LocalHandler());
+        new FileChunker(localmode, new LocalHandler()).download(mockoutput, "on99file");
         //System.out.println(mockoutput.toString());
         assertArrayEquals(data, mockoutput.toByteArray());
     }
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     @Test
-    public void testUploadSameFile() throws IOException {
+    public void testUploadSameFile() throws IOException, FileChunker.StoreException {
         CheckInit.run();
 
         ByteArrayInputStream mockFile2 = new ByteArrayInputStream(data);
-        FileChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
+        new FileChunker(localmode, new LocalHandler()).upload(mockFile2, "on99file2", paramsL);
         mockFile2 = new ByteArrayInputStream(data);
-        thrown.expect(IOException.class);
+        thrown.expect(FileChunker.StoreException.class);
         thrown.expectMessage("File already exist in the store");
-        FileChunker.upload(mockFile2, "on99file2", paramsL, new LocalHandler());
+        new FileChunker(localmode, new LocalHandler()).upload(mockFile2, "on99file2", paramsL);
     }
 
     /*
      * This test case is inspected by eye
      */
     @Test
-    public void testDeleteFile() throws IOException {
+    public void testDeleteFile() throws IOException, FileChunker.StoreException {
         CheckInit.run();
 
         ByteArrayInputStream mockFile3 = new ByteArrayInputStream(data);
-        FileChunker.upload(mockFile3, "on99file3", paramsL, new LocalHandler());
+        new FileChunker(localmode, new LocalHandler()).upload(mockFile3, "on99file3", paramsL);
         mockFile3 = new ByteArrayInputStream("this will not delete".getBytes());
-        FileChunker.upload(mockFile3, "ShouldNotDelete", paramsL, new LocalHandler());
-        FileChunker.delete("on99file3", new LocalHandler());
+        new FileChunker(localmode, new LocalHandler()).upload(mockFile3, "shouldNotDelete", paramsL);
+        new FileChunker(localmode, new LocalHandler()).delete("on99file3");
     }
 }
