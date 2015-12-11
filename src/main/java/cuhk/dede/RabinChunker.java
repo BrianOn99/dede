@@ -29,6 +29,11 @@ public class RabinChunker
              */
             if (winSize < minSize)
                 winSize = minSize;
+            if (maxSize < minSize) {
+                System.err.println("max chunck size is smaller than min chunk size. " +
+                                   "Increasing max chunk size");
+                maxSize = minSize * 4;
+            }
             this.winSize = winSize;
             this.maxSize = maxSize;
             this.minSize = minSize;
@@ -104,8 +109,8 @@ public class RabinChunker
             fpt &= modmask;
             //System.out.printf("processed %s, now fingerprint %d, masked %d\n", ch, fpt, (fpt & avgSize_1));
 
-            if ((currSize > params.minSize) &&
-                ((currSize > params.maxSize) || goodfpt())
+            if ((currSize >= params.minSize) &&
+                ((currSize >= params.maxSize) || goodfpt())
                 ) {
                 ChunkInfo retInfo = new ChunkInfo(currSize, chunk);
                 chunk = new byte[params.maxSize];
