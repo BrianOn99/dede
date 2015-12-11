@@ -3,6 +3,7 @@ package cuhk.dede;
 import java.io.IOException;
 import java.io.File;
 import java.util.AbstractMap;
+import java.util.Set;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.Serializer;
@@ -74,6 +75,10 @@ public class MetadataStore
 
     public byte[] getFileRecord(String name) {
         return checksum_store.get(name);
+    }
+
+    public Set<String> listFile() {
+        return checksum_store.keySet();
     }
 
     public void commit() {
