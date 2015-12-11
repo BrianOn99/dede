@@ -3,7 +3,6 @@ package cuhk.dede;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -18,14 +17,13 @@ public class FileChunker
     private static final String hash_func = "SHA-1";
     private static final int checksum_hexlen = 40;
 
-    public static void upload(InputStream raw_input, String uploaded_name,
+    public static void upload(InputStream in_stream, String uploaded_name,
             RabinChunker.Params params, Handler upload_handler) throws IOException {
         MetadataStore meta_store = new MetadataStore(MetadataStore.Mode.LOCAL);
         if (meta_store.fileExist(uploaded_name)) {
             throw new IOException("File already exist in the store");
         }
 
-        BufferedInputStream in_stream = new BufferedInputStream(raw_input);
         RabinChunker chunker = new RabinChunker(in_stream, params);
         /*
          * TODO: make it general to handle remote store
