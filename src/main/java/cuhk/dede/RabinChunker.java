@@ -99,13 +99,14 @@ public class RabinChunker
         int modExpPrime = modExp(params.prime, params.winSize, modmask+1);
         for (int ch; (ch = filein.read()) != -1;) {
             chunk[currSize++] = (byte)ch;
-            fpt = fpt * params.prime + ch;
             /*
              * If we are near the start of processing, or just have given out a chunk
              * skip subtracting the byte m index before
              */
             if (currSize > params.winSize)
                 fpt -= chunk[currSize - (params.winSize+1)] * modExpPrime;
+
+            fpt = fpt * params.prime + ch;
             fpt &= modmask;
             //System.out.printf("processed %s, now fingerprint %d, masked %d\n", ch, fpt, (fpt & avgSize_1));
 
