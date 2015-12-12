@@ -105,6 +105,9 @@ public class FileChunker
                 }
             }
         } finally {
+            /* In priciple, there is nothing to commit, but mapdb is opened in readwrite
+             * mode, so have to do this anyway */
+            meta_store.commit();
             meta_store.close();
         }
     }
@@ -131,8 +134,8 @@ public class FileChunker
                 }
             }
             meta_store.deleteFileRecord(uploaded_name);
-            meta_store.commit();
         } finally {
+            meta_store.commit();
             meta_store.close();
         }
     }
